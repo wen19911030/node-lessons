@@ -7,6 +7,9 @@ const url = require("url");
 const app = express();
 const EP = new eventproxy();
 
+// var fs = require("fs");
+// var path = require("path");
+
 app.get("/", (req, res, next) => {
 	let cnodeUrl = "https://cnodejs.org/";
 	request.get(cnodeUrl).end((err, sers) => {
@@ -14,7 +17,7 @@ app.get("/", (req, res, next) => {
 			return next(err);
 		}
 		const $ = cheerio.load(sers.text);
-		const items = [];
+		let items = [];
 		const topicUrls = [];
 		// 获取首页所有的链接
 		$("#topic_list .topic_title").each(function(idx, element) {
@@ -34,23 +37,31 @@ app.get("/", (req, res, next) => {
 		});
 
 		EP.after("get_detail", topicUrls.length, list => {
-			items = list.map(item => {
-				let link = item.url;
-				const $ = cheerio.load(item.txt);
+			items = list.map((item, index) => {
+				let href = item[0];
+				// fs.writeFile(path.join(__dirname, `text${index}.txt`), item[1].text, function(err) {
+				// 	if (err) {
+				// 		console.log(err);
+				// 	} else {
+				// 		console.log("file writes sucess!!");
+				// 	}
+				// });
+				// 可能未获取到数据
+				const $ = cheerio.load(item[1].text);
+				let title = $(".topic_full_title")
+					.text()
+					.trim();
+				let comment1 = $(".reply_item .markdown-text p")
+					.text()
+					.trim();
 				return {
-					title: $(".topic_full_title")
-						.text()
-						.trim(),
-					href: link,
-					comment1: $(".reply_content")
-						.eq(0)
-						.text()
-						.trim()
+					title,
+					href,
+					comment1
 				};
 			});
+			res.send(items);
 		});
-
-		res.send(items);
 	});
 });
 
